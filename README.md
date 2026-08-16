@@ -42,7 +42,7 @@ O agente responde sobre os 5 documentos corporativos incluídos:
 |---|---|---|
 | Interface | Streamlit | Simples, gratuito, deploy fácil |
 | Orquestração RAG | LangChain | Padrão de mercado, integrações prontas |
-| LLM | Google Gemini 1.5 Flash (gratuito) | Chave free tier generosa; Groq e Hugging Face como alternativas |
+| LLM | Google Gemini 3.6 Flash (gratuito) | Chave free tier generosa; Groq e Hugging Face como alternativas |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` | Local, gratuito, leve (~80 MB), sem consumir cota de API |
 | Banco vetorial | ChromaDB (persistente, local) | Zero configuração de servidor, gratuito |
 | Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Local, gratuito, melhora a precisão da recuperação |
@@ -126,29 +126,6 @@ O navegador abrirá automaticamente em `http://localhost:8501`.
 
 ---
 
-## 📁 Estrutura do projeto
-
-```
-bimbambuy-rag-agent/
-├── app.py                  # Interface web Streamlit (chat, fontes, métricas)
-├── document_loader.py      # Extração de PDF, Word, Excel, PPT, MD, CSV, JSON, HTML
-├── text_processor.py       # Limpeza de texto + chunking por seção/tamanho
-├── vector_store.py         # ChromaDB: embeddings, indexação e busca semântica
-├── reranker.py             # Reranking com cross-encoder
-├── rag_chain.py            # Pipeline RAG: busca → rerank → prompt → LLM → citações
-├── utils.py                # Carregamento em lote, config do LLM, logging, helpers
-├── requirements.txt        # Dependências com versões fixadas
-├── .env.example            # Modelo de configuração (copie para .env)
-├── .gitignore              # Protege .env, chroma_db/ e caches
-├── data/
-│   └── documents/          # 📄 Base de conhecimento (os 5 PDFs da BimBam Buy)
-├── tests/
-│   └── test_pipeline.py    # Testes básicos do pipeline
-└── chroma_db/              # (criado automaticamente) banco vetorial persistente
-```
-
----
-
 ## 🔄 Fluxo de funcionamento
 
 ```
@@ -181,56 +158,8 @@ bimbambuy-rag-agent/
 
 ---
 
-## 🧪 Testes
-
-```bash
-python tests/test_pipeline.py
-```
-
-Os testes verificam: carregamento dos 5 PDFs, chunking com detecção de
-seções, limpeza de texto, formatação de tempo e (se houver internet)
-indexação + busca semântica ponta a ponta.
-
----
-
-## ☁️ Deploy no Streamlit Cloud (gratuito)
-
-1. Suba este projeto para um **repositório público no GitHub**
-   (o `.gitignore` já impede que `.env` e `chroma_db/` sejam enviados);
-2. Acesse https://share.streamlit.io e conecte sua conta GitHub;
-3. Clique em **"New app"**, selecione o repositório, branch `main` e o
-   arquivo `app.py`;
-4. Em **"Advanced settings" → "Secrets"**, adicione suas chaves no formato:
-
-   ```toml
-   LLM_PROVIDER = "gemini"
-   GEMINI_API_KEY = "sua_chave_aqui"
-   ```
-
-5. Clique em **"Deploy"** e aguarde — a primeira inicialização baixa os
-   modelos e indexa os documentos automaticamente.
-
-📖 Documentação oficial: https://docs.streamlit.io/deploy/streamlit-community-cloud
-
-> **Nota técnica:** o arquivo `app.py` já inclui a correção de
-> compatibilidade de SQLite exigida pelo ChromaDB no Streamlit Cloud
-> (via `pysqlite3-binary`, presente no `requirements.txt`). Nada extra
-> é necessário.
-
----
-
 ## 📸 O agente em funcionamento
 
-> **Adicione aqui prints da sua execução.** Para gerar:
->
-> 1. Rode `streamlit run app.py` localmente (ou abra o link do deploy);
-> 2. Faça uma pergunta, por exemplo: *"Qual o prazo para solicitar
->    devolução de um produto?"*;
-> 3. Capture a tela mostrando a resposta, as fontes citadas e as métricas;
-> 4. Salve a imagem em `docs/screenshot.png` e a referência abaixo
->    passará a funcionar:
->
-> ![Agente BimBam Buy respondendo com citação de fontes](docs/screenshot.png)
 
 **Perguntas de exemplo para demonstrar o sistema:**
 
@@ -241,54 +170,6 @@ indexação + busca semântica ponta a ponta.
 - `Existe frete grátis? Qual o valor mínimo?`
 - `Qual a capital da França?` → *deve responder que não encontrou a
   informação nos documentos (teste de fallback)*
-
----
-
-## ⚠️ Limitações conhecidas
-
-- **Sem memória de conversa**: cada pergunta é independente (o agente não
-  usa o histórico para interpretar perguntas de acompanhamento como
-  "e o prazo?" — reformule incluindo o contexto);
-- **Modelos multilíngues generalistas**: o embedding e o reranker foram
-  treinados majoritariamente em inglês; funcionam bem em português, mas
-  modelos PT-BR dedicados podem melhorar a precisão;
-- **PDFs digitalizados (escaneados)** sem camada de texto não são lidos
-  (seria necessário OCR, ex.: Tesseract);
-- **Cota do free tier do Gemini**: uso intenso pode atingir limites de
-  requisições por minuto/dia — nesse caso, troque o provedor no `.env`;
-- A base de conhecimento cobre apenas os documentos presentes em
-  `data/documents/`.
-
-## 🔮 Melhorias futuras
-
-- [ ] Memória conversacional (contexto do histórico no prompt)
-- [ ] OCR para PDFs escaneados
-- [ ] Filtro de busca por domínio/documento na interface
-- [ ] Upload de novos documentos pela própria interface
-- [ ] Avaliação automática de qualidade (RAGAS)
-- [ ] Modelos de embedding/reranking em português
-- [ ] Autenticação de colaboradores
-
----
-
-## 📝 Decisões de implementação documentadas
-
-- **LLM padrão = Gemini 1.5 Flash**: escolhido pelo free tier generoso e
-  boa qualidade em português. Groq e Hugging Face estão pré-configurados
-  como alternativas (basta trocar `LLM_PROVIDER` no `.env`);
-- **ChromaDB persistente** (em vez de FAISS): além da busca vetorial,
-  armazena os metadados usados nas citações e não exige reindexação;
-- **Chunking por seção como estratégia prioritária**: os documentos
-  corporativos são estruturados em seções numeradas, então dividir por
-  seção preserva o contexto semântico melhor que cortes arbitrários.
-  Seções muito longas são subdivididas por tamanho com overlap de 200
-  caracteres;
-- **Temperatura 0.1 no LLM**: respostas mais fiéis ao contexto, menos
-  "criatividade" — essencial para uso corporativo;
-- **Limiar de similaridade (0.25)**: resultados da busca com score abaixo
-  disso são descartados e o agente responde com o fallback, em vez de
-  arriscar uma resposta sem fundamento;
-- **IDs determinísticos de chunks**: reindexar a base não cria duplicatas.
 
 ---
 
