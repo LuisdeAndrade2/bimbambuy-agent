@@ -214,13 +214,9 @@ def render_sources(sources: list):
 
 
 def render_metrics(metrics: dict):
-    """Exibe as métricas da resposta em colunas compactas."""
-    if not metrics:
-        return
-    cols = st.columns(3)
-    cols[0].metric("⏱️ Tempo", format_time(metrics["elapsed_seconds"]))
-    cols[1].metric("🔍 Chunks recuperados", metrics["chunks_retrieved"])
-    cols[2].metric("📄 Chunks utilizados", metrics["chunks_used"])
+    """Exibe as métricas da resposta em colunas compactas (desativado)."""
+    # Métricas técnicas removidas para simplificar a interface
+    pass
 
 
 # Renderiza todo o histórico
