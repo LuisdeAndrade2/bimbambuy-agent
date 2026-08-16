@@ -1,0 +1,30 @@
+# Interface web
+streamlit==1.41.1
+
+# Orquestração LLM (LangChain) e provedores gratuitos
+langchain==0.3.14
+langchain-community==0.3.14
+langchain-google-genai==2.0.8
+langchain-groq==0.2.4
+langchain-huggingface==0.1.2
+
+# Banco vetorial e embeddings (100% local e gratuito)
+chromadb==0.5.23
+sentence-transformers==3.3.1
+
+# Extração de documentos
+pdfplumber==0.11.4      # PDF (prioritário)
+pypdf==5.1.0            # PDF (fallback)
+python-docx==1.1.2      # Word
+openpyxl==3.1.5         # Excel
+python-pptx==1.0.2      # PowerPoint
+beautifulsoup4==4.12.3  # HTML
+lxml==5.3.0             # parser HTML rápido
+Markdown==3.7           # Markdown
+
+# Utilidades
+python-dotenv==1.0.1    # leitura do arquivo .env
+
+# Correção de compatibilidade do SQLite no Streamlit Cloud
+# (necessário apenas no deploy; localmente é inofensivo)
+pysqlite3-binary==0.5.4; sys_platform == 'linux'
