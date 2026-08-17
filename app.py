@@ -20,20 +20,6 @@ from dotenv import load_dotenv
 # Carrega variáveis de ambiente do .env (chaves de API etc.)
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# Compatibilidade ChromaDB x Streamlit Cloud
-# O ChromaDB exige SQLite >= 3.35; o Streamlit Cloud às vezes tem uma versão
-# mais antiga. O pacote pysqlite3-binary resolve isso — este truque só é
-# ativado quando o pysqlite3 está instalado (localmente não faz diferença).
-# ---------------------------------------------------------------------------
-try:
-    __import__("pysqlite3")
-    import sys
-
-    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-except ImportError:
-    pass
-
 from utils import (
     load_documents_from_folder,
     get_llm,
