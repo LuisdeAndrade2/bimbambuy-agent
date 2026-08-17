@@ -14,11 +14,20 @@ Funcionalidades:
 """
 
 import os
+import sys
 import streamlit as st
-from dotenv import load_dotenv
 
-# Carrega variáveis de ambiente do .env (chaves de API etc.)
-load_dotenv()
+# ---------------------------------------------------------------------------
+# Compatibilidade ChromaDB x Streamlit Cloud
+# O ChromaDB exige SQLite >= 3.35; o Streamlit Cloud às vezes tem uma versão
+# mais antiga. O pacote pysqlite3-binary resolve isso — este truque só é
+# ativado quando o pysqlite3 está instalado (localmente não faz diferença).
+# ---------------------------------------------------------------------------
+try:
+    __import__("pysqlite3")
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
 
 from utils import (
     load_documents_from_folder,
@@ -59,34 +68,33 @@ def initialize_system(force_reindex: bool = False):
     do servidor — recarregar a página ou conversar não reindexa nada.
     Como o ChromaDB é persistente, nas próximas execuções a indexação é
     pulada automaticamente (a coleção já existe em disco).
+
+    IMPORTANTE: NUNCA chame st.error(), st.stop() ou qualquer comando
+    de UI dentro desta função cacheada. Isso quebra o Streamlit.
     """
     setup_logging()
 
     vector_store = VectorStore(persist_dir=CHROMA_DIR)
+    documents = []
 
     if force_reindex or vector_store.is_empty():
         if force_reindex:
             vector_store.clear()
 
         documents = load_documents_from_folder(DOCS_FOLDER)
-        if not documents:
-            st.error(
-                f"Nenhum documento encontrado em `{DOCS_FOLDER}`. "
-                "Adicione os arquivos da base de conhecimento e reinicie."
-            )
-            st.stop()
 
-        processor = TextProcessor()
-        chunks = []
-        for doc in documents:
-            chunks.extend(processor.create_chunks(doc))
-        vector_store.index_documents(chunks)
+        if documents:
+            processor = TextProcessor()
+            chunks = []
+            for doc in documents:
+                chunks.extend(processor.create_chunks(doc))
+            vector_store.index_documents(chunks)
 
     llm = get_llm()  # levanta ValueError amigável se a chave faltar
     reranker = Reranker()
     chain = RAGChain(llm=llm, vector_store=vector_store, reranker=reranker)
 
-    return chain, vector_store
+    return chain, vector_store, documents
 
 
 # ---------------------------------------------------------------------------
@@ -101,25 +109,47 @@ st.caption(
 # ---------------------------------------------------------------------------
 # Inicialização com indicador de progresso
 # ---------------------------------------------------------------------------
+# Garante que a flag force_reindex existe no session_state
+if "force_reindex" not in st.session_state:
+    st.session_state["force_reindex"] = False
+
 try:
     with st.spinner(
         "Inicializando a base de conhecimento... "
         "(na 1ª execução isso pode levar alguns minutos)"
     ):
-        chain, vector_store = initialize_system(
+        chain, vector_store, documents = initialize_system(
             force_reindex=st.session_state.get("force_reindex", False)
         )
         # Reseta a flag após usar
         st.session_state["force_reindex"] = False
+
+    # Validação de documentos FORA da função cacheada
+    if not documents and vector_store.is_empty():
+        st.error(
+            f"Nenhum documento encontrado em `{DOCS_FOLDER}`. "
+            "Adicione os arquivos da base de conhecimento e reinicie."
+        )
+        st.info(
+            "Certifique-se de que a pasta `data/documents/` existe no "
+            "repositório e contém os documentos corporativos."
+        )
+        st.stop()
+
 except ValueError as exc:
-    # Erro típico: chave de API ausente — mensagem amigável para iniciantes
+    # Erro típico: chave de API ausente
     st.error(f"⚠️ Configuração incompleta: {exc}")
     st.info(
-        "**Como resolver:**\n"
-        "1. Crie uma chave gratuita em https://aistudio.google.com/apikey\n"
-        "2. Copie o arquivo `.env.example` para `.env`\n"
-        "3. Cole sua chave em `GEMINI_API_KEY=...`\n"
-        "4. Rode novamente: `streamlit run app.py`"
+        "**Como resolver (Streamlit Cloud):**\n"
+        "1. Acesse o painel do seu app em share.streamlit.io\n"
+        "2. Vá em **Settings → Secrets**\n"
+        "3. Cole suas variáveis no formato TOML:\n"
+        "```\n"
+        'LLM_PROVIDER = "gemini"\n'
+        'GEMINI_API_KEY = "sua_chave_aqui"\n'
+        'DOCS_FOLDER = "data/documents"\n'
+        'CHROMA_DIR = "chroma_db"\n'
+        "```"
     )
     st.stop()
 except Exception as exc:
@@ -139,6 +169,8 @@ with st.sidebar:
         st.markdown("**Documentos disponíveis:**")
         for f in files:
             st.markdown(f"- `{f}`")
+    else:
+        st.warning(f"Pasta `{DOCS_FOLDER}` não encontrada.")
 
     st.divider()
     provider = os.getenv("LLM_PROVIDER", "gemini")
@@ -199,9 +231,9 @@ def render_sources(sources: list):
                 st.caption(f"_{src['excerpt']}..._")
 
 
-# Renderiza o histórico de conversa
-for i, msg in enumerate(st.session_state["messages"]):
-    with st.chat_message(msg["role"], key=f"msg_{i}"):
+# Renderiza todo o histórico
+for msg in st.session_state["messages"]:
+    with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg.get("sources"):
             render_sources(msg["sources"])
@@ -210,38 +242,26 @@ for i, msg in enumerate(st.session_state["messages"]):
 # Entrada do usuário e geração da resposta
 # ---------------------------------------------------------------------------
 if query := st.chat_input("Digite sua pergunta sobre os documentos internos..."):
-    # Adiciona a pergunta ao histórico e exibe
+    # Mostra a pergunta do usuário
     st.session_state["messages"].append({"role": "user", "content": query})
-    
     with st.chat_message("user"):
         st.markdown(query)
 
     # Gera a resposta com indicador de processamento
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        sources_placeholder = st.empty()
-        info_placeholder = st.empty()
-        
         with st.spinner("Processando sua pergunta..."):
             result = chain.generate_response(query)
 
-        # Exibe a resposta
-        with message_placeholder.container():
-            st.markdown(result["answer"])
-        
-        # Exibe as fontes
-        with sources_placeholder.container():
-            render_sources(result["sources"])
+        st.markdown(result["answer"])
+        render_sources(result["sources"])
 
-        # Exibe aviso se for fallback
         if result["is_fallback"]:
-            with info_placeholder.container():
-                st.info(
-                    "💡 Esta pergunta parece estar fora do escopo dos documentos "
-                    "indexados. Tente reformular ou verifique se o documento "
-                    "relevante foi adicionado à pasta `data/documents/`.",
-                    icon="ℹ️",
-                )
+            st.info(
+                "💡 Esta pergunta parece estar fora do escopo dos documentos "
+                "indexados. Tente reformular ou verifique se o documento "
+                "relevante foi adicionado à pasta `data/documents/`.",
+                icon="ℹ️",
+            )
 
     # Salva a resposta no histórico
     st.session_state["messages"].append({
