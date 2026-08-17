@@ -199,27 +199,20 @@ def render_sources(sources: list):
                 st.caption(f"_{src['excerpt']}..._")
 
 
-def render_metrics(metrics: dict):
-    """Exibe as métricas da resposta em colunas compactas (desativado)."""
-    # Métricas técnicas removidas para simplificar a interface
-    pass
-
-
-# Renderiza todo o histórico
+# Renderiza o histórico (exceto a última mensagem que está sendo processada)
 for msg in st.session_state["messages"]:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg.get("sources"):
             render_sources(msg["sources"])
-        if msg.get("metrics"):
-            render_metrics(msg["metrics"])
 
 # ---------------------------------------------------------------------------
 # Entrada do usuário e geração da resposta
 # ---------------------------------------------------------------------------
 if query := st.chat_input("Digite sua pergunta sobre os documentos internos..."):
-    # Mostra a pergunta do usuário
+    # Mostra a pergunta do usuário imediatamente
     st.session_state["messages"].append({"role": "user", "content": query})
+    
     with st.chat_message("user"):
         st.markdown(query)
 
@@ -228,16 +221,11 @@ if query := st.chat_input("Digite sua pergunta sobre os documentos internos...")
         with st.spinner("Processando sua pergunta..."):
             result = chain.generate_response(query)
 
+        # Exibe a resposta
         st.markdown(result["answer"])
         render_sources(result["sources"])
 
-        metrics = {
-            "elapsed_seconds": result["elapsed_seconds"],
-            "chunks_retrieved": result["chunks_retrieved"],
-            "chunks_used": result["chunks_used"],
-        }
-        render_metrics(metrics)
-
+        # Exibe aviso se for fallback
         if result["is_fallback"]:
             st.info(
                 "💡 Esta pergunta parece estar fora do escopo dos documentos "
@@ -246,10 +234,13 @@ if query := st.chat_input("Digite sua pergunta sobre os documentos internos...")
                 icon="ℹ️",
             )
 
-    # Salva a resposta no histórico
+    # Salva a resposta completa no histórico
     st.session_state["messages"].append({
         "role": "assistant",
         "content": result["answer"],
         "sources": result["sources"],
-        "metrics": metrics,
+        "is_fallback": result["is_fallback"],
     })
+    
+    # Recarrega para evitar conflitos de DOM
+    st.rerun()
