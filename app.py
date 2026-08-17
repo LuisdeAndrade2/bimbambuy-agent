@@ -199,9 +199,9 @@ def render_sources(sources: list):
                 st.caption(f"_{src['excerpt']}..._")
 
 
-# Renderiza o histórico (exceto a última mensagem que está sendo processada)
-for msg in st.session_state["messages"]:
-    with st.chat_message(msg["role"]):
+# Renderiza o histórico de conversa
+for i, msg in enumerate(st.session_state["messages"]):
+    with st.chat_message(msg["role"], key=f"msg_{i}"):
         st.markdown(msg["content"])
         if msg.get("sources"):
             render_sources(msg["sources"])
@@ -210,7 +210,7 @@ for msg in st.session_state["messages"]:
 # Entrada do usuário e geração da resposta
 # ---------------------------------------------------------------------------
 if query := st.chat_input("Digite sua pergunta sobre os documentos internos..."):
-    # Mostra a pergunta do usuário imediatamente
+    # Adiciona a pergunta ao histórico e exibe
     st.session_state["messages"].append({"role": "user", "content": query})
     
     with st.chat_message("user"):
@@ -218,29 +218,35 @@ if query := st.chat_input("Digite sua pergunta sobre os documentos internos...")
 
     # Gera a resposta com indicador de processamento
     with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        sources_placeholder = st.empty()
+        info_placeholder = st.empty()
+        
         with st.spinner("Processando sua pergunta..."):
             result = chain.generate_response(query)
 
         # Exibe a resposta
-        st.markdown(result["answer"])
-        render_sources(result["sources"])
+        with message_placeholder.container():
+            st.markdown(result["answer"])
+        
+        # Exibe as fontes
+        with sources_placeholder.container():
+            render_sources(result["sources"])
 
         # Exibe aviso se for fallback
         if result["is_fallback"]:
-            st.info(
-                "💡 Esta pergunta parece estar fora do escopo dos documentos "
-                "indexados. Tente reformular ou verifique se o documento "
-                "relevante foi adicionado à pasta `data/documents/`.",
-                icon="ℹ️",
-            )
+            with info_placeholder.container():
+                st.info(
+                    "💡 Esta pergunta parece estar fora do escopo dos documentos "
+                    "indexados. Tente reformular ou verifique se o documento "
+                    "relevante foi adicionado à pasta `data/documents/`.",
+                    icon="ℹ️",
+                )
 
-    # Salva a resposta completa no histórico
+    # Salva a resposta no histórico
     st.session_state["messages"].append({
         "role": "assistant",
         "content": result["answer"],
         "sources": result["sources"],
         "is_fallback": result["is_fallback"],
     })
-    
-    # Recarrega para evitar conflitos de DOM
-    st.rerun()
