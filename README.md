@@ -55,7 +55,6 @@ O agente responde sobre os 5 documentos corporativos incluídos:
 - **Python 3.9 ou superior** (recomendado: 3.10–3.12)
 - Conexão com a internet na primeira execução (para baixar os modelos de
   embedding/reranking, ~170 MB, e para chamar a API do LLM)
-- ~2 GB de RAM livres
 
 ---
 
@@ -168,12 +167,18 @@ https://bimbambuy-agent-ia.streamlit.app/
 
 **Perguntas de exemplo para demonstrar o sistema:**
 
-- `Qual o prazo para solicitar a devolução de um produto?`
-- `Quais métodos de pagamento a BimBam Buy aceita?`
-- `O que a garantia não cobre?`
-- `Como funciona o pagamento das comissões de afiliados?`
-- `Existe frete grátis? Qual o valor mínimo?`
-- `Qual a capital da França?` → *deve responder que não encontrou a
+`Qual o prazo para solicitar a devolução de um produto?`
+- *Exemplo de Resposta*
+- `O prazo para solicitar a devolução de um produto varia dependendo do motivo da solicitação ou da situação do item .
+Recebimento de produto diferente do comprado: a apresentação das evidências deve ser feita dentro de 48 horas .
+Devolução por arrependimento ou mudança de ideia: a solicitação deve ser realizada dentro do prazo de 10 dias corridos, desde que o produto esteja sem uso .
+Casos de garantia por defeito: o prazo varia de acordo com o tipo de produto, categoria e país, sendo informado na ficha do produto ou na confirmação da compra .`
+
+`O que a garantia não cobre?`
+- *Exemplo de Resposta*
+- `A garantia da BimBam Buy não cobre falhas ou estragos gerados por mau uso, fatores externos, intervenções não autorizadas, desgaste natural e devoluções sem defeito.
+Além disso, se um cliente quiser devolver um produto que não apresente nenhuma falha, o caso não é coberto pela garantia, devendo ser processado conforme a Política de Reembolsos e Devoluções .`
+`Qual a capital da França?` → *deve responder que não encontrou a
   informação nos documentos (teste de fallback)*
 
 ---
