@@ -160,6 +160,11 @@ O navegador abrirá automaticamente em `http://localhost:8501`.
 
 ## 📸 O agente em funcionamento
 
+<img width="1893" height="1009" alt="Captura de tela 2026-08-16 224005" src="https://github.com/user-attachments/assets/cf4f6a3d-5832-4f7a-b184-8efeaed35a3d" />
+
+<img width="1892" height="1017" alt="Captura de tela 2026-08-16 224137" src="https://github.com/user-attachments/assets/5e1cacc0-30b3-40cc-9c86-18816af783a5" />
+
+https://bimbambuy-agent-ia.streamlit.app/
 
 **Perguntas de exemplo para demonstrar o sistema:**
 
