@@ -130,12 +130,24 @@ class RAGChain:
 
         # ---- Etapa 5: extração das fontes citadas ----------------------
         sources = self.extract_sources(answer, top_chunks)
+        
+        # Remove os marcadores [Fonte N] da resposta final
+        clean_answer = self.remove_source_markers(answer)
 
         elapsed = time.time() - start
-        is_fallback = FALLBACK_MESSAGE.lower() in answer.lower()
+        
+        # É fallback se:
+        # 1. Não encontrou nenhum chunk relevante inicialmente, OU
+        # 2. Nenhuma fonte foi citada, OU
+        # 3. A resposta contém a mensagem de fallback
+        is_fallback = (
+            not candidates 
+            or not sources 
+            or FALLBACK_MESSAGE.lower() in answer.lower()
+        )
 
         return {
-            "answer": answer,
+            "answer": clean_answer,
             "sources": sources,
             "chunks_retrieved": len(candidates),
             "chunks_used": len(top_chunks),
@@ -214,6 +226,19 @@ class RAGChain:
                 sources.append(self._source_dict(i, chunk))
 
         return sources
+
+    def remove_source_markers(self, text: str) -> str:
+        """
+        Remove os marcadores [Fonte N] do texto da resposta.
+        
+        Captura tanto marcadores simples [Fonte 1] quanto múltiplos
+        [Fonte 1, Fonte 2] ou [Fonte 1 e Fonte 2].
+        
+        Mantém apenas o conteúdo expandido, sem os identificadores
+        entre chaves.
+        """
+        # Captura [Fonte ...] incluindo tudo dentro dos colchetes
+        return re.sub(r"\[Fonte[^\]]*\]", "", text, flags=re.IGNORECASE).strip()
 
     def _source_dict(self, source_id: int, chunk: dict) -> dict:
         """Converte um chunk em um dicionário de fonte amigável para a UI."""
