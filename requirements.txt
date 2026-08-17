@@ -18,8 +18,7 @@ pypdf==5.1.0            # PDF (fallback)
 python-docx==1.1.2      # Word
 openpyxl==3.1.5         # Excel
 python-pptx==1.0.2      # PowerPoint
-beautifulsoup4==4.12.3  # HTML
-lxml==4.9.4             # parser HTML rápido (versão com wheels pré-compiladas)
+beautifulsoup4==4.12.3  # HTML (usa parser html.parser nativo)
 Markdown==3.7           # Markdown
 
 # Utilidades

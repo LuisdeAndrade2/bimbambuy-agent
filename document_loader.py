@@ -247,7 +247,8 @@ class DocumentLoader:
         from bs4 import BeautifulSoup
 
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-            soup = BeautifulSoup(f.read(), "lxml")
+            # Usa parser html.parser nativo (sem dependências externas)
+            soup = BeautifulSoup(f.read(), "html.parser")
 
         # Remove elementos que não carregam conteúdo útil
         for tag in soup(["script", "style", "noscript"]):
