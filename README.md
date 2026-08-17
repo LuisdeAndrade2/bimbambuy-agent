@@ -178,8 +178,6 @@ Casos de garantia por defeito: o prazo varia de acordo com o tipo de produto, ca
 - *Exemplo de Resposta*
 - `A garantia da BimBam Buy não cobre falhas ou estragos gerados por mau uso, fatores externos, intervenções não autorizadas, desgaste natural e devoluções sem defeito.
 Além disso, se um cliente quiser devolver um produto que não apresente nenhuma falha, o caso não é coberto pela garantia, devendo ser processado conforme a Política de Reembolsos e Devoluções .`
-`Qual a capital da França?` → *deve responder que não encontrou a
-  informação nos documentos (teste de fallback)*
 
 ---
 
